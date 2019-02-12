@@ -41,7 +41,7 @@ public class Parser {
                     + " (?<isAddressPrivate>p?)a/(?<address>[^/]+)"
                     + "(?<tagArguments>(?: t/[^/]+)*)"); // variable number of tags
 
-
+    public static final Pattern PERSON_NAME_ARGS_FORMAT = Pattern.compile("(?<name>[^/]+)");
     /**
      * Signals that the user input could not be parsed.
      */
@@ -166,11 +166,19 @@ public class Parser {
     private Command prepareDelete(String args) {
         try {
             final int targetIndex = parseArgsAsDisplayedIndex(args);
+
             return new DeleteCommand(targetIndex);
-        } catch (ParseException pe) {
-            return new IncorrectCommand(String.format(MESSAGE_INVALID_COMMAND_FORMAT, DeleteCommand.MESSAGE_USAGE));
-        } catch (NumberFormatException nfe) {
-            return new IncorrectCommand(MESSAGE_INVALID_PERSON_DISPLAYED_INDEX);
+        } catch (Exception e) {
+            if (e instanceof NumberFormatException) {
+                return new IncorrectCommand(MESSAGE_INVALID_PERSON_DISPLAYED_INDEX);
+            }
+            try {
+                final String name = parseArgsAsName(args);
+
+                return new DeleteCommand(name);
+            } catch (ParseException pe){
+                return new IncorrectCommand(String.format(MESSAGE_INVALID_COMMAND_FORMAT, DeleteCommand.MESSAGE_USAGE));
+            }
         }
     }
 
@@ -181,7 +189,6 @@ public class Parser {
      * @return the prepared command
      */
     private Command prepareView(String args) {
-
         try {
             final int targetIndex = parseArgsAsDisplayedIndex(args);
             return new ViewCommand(targetIndex);
@@ -228,6 +235,20 @@ public class Parser {
         return Integer.parseInt(matcher.group("targetIndex"));
     }
 
+    /**
+     * Parses the given arguments string as a single name string.
+     *
+     * @param args arguments string to parse as name
+     * @return the parsed name
+     * @throws ParseException if there is an error in parsing a string
+     */
+    private String parseArgsAsName(String args) throws ParseException {
+        final Matcher matcher = PERSON_NAME_ARGS_FORMAT.matcher(args.trim());
+        if (!matcher.matches()) {
+            throw new ParseException("Could not find name to parse");
+        }
+        return matcher.group();
+    }
 
     /**
      * Parses arguments in the context of the find person command.
